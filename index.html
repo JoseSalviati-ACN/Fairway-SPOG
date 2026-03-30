@@ -13,6 +13,22 @@
   --ag:#FFEB9C;--afg:#9C5700;--rg:#FFC7CE;--rfg:#9C0006;
   --ng:#D9D9D9;--nfg:#595959;--pg:#E2EFDA;--pfg:#375623;--pg:#E8D5F5;--pfg:#6B2FA0;
 }
+body.light{
+  --bg:#f4f6fa;--surf:#ffffff;--surf2:#eef1f7;--bdr:#d1d9e6;
+  --txt:#1a202c;--mut:#718096;--mut2:#4a5568;--blue:#3b57e8;
+  --cg:#C6EFCE;--cfg:#276221;--og:#DDEBF7;--ofg:#1F497D;
+  --ag:#FFEB9C;--afg:#9C5700;--rg:#FFC7CE;--rfg:#9C0006;
+  --ng:#D9D9D9;--nfg:#595959;--pg:#E2EFDA;--pfg:#375623;
+}
+body.light .ntab{color:#718096}
+body.light .ntab.active{color:var(--blue)}
+body.light .ntab:hover{color:var(--txt)}
+body.light .tbar-title{color:#1a202c}
+body.light .scard-val{color:#1a202c}
+body.light th{background:#2c5282;color:#fff}
+body.light .total-row td{background:#2c5282;color:#fff}
+body.light #fb-all{background:#e2e8f0;color:#4a5568;border-color:#d1d9e6}
+body.light #fb-all.on{background:#2c5282;color:#fff;border-color:#2c5282}
 body{background:var(--bg);color:var(--txt);font-family:system-ui,Arial,sans-serif;font-size:14px;min-height:100vh}
 .topbar{background:var(--surf);border-bottom:1px solid var(--bdr);padding:0 20px;display:flex;align-items:center;justify-content:space-between;min-height:54px;position:sticky;top:0;z-index:100}
 .tbar-title{font-weight:800;font-size:1.05rem;color:#fff;letter-spacing:.01em}
@@ -111,7 +127,7 @@ tr:hover td{background:rgba(79,110,247,.04)}
     <button class="filter-btn" id="fb-Behind"    onclick="setFilter('Behind')"   >&#9679; Behind</button>
     <button class="filter-btn" id="fb-Proposed"  onclick="setFilter('Proposed')" >&#9679; Proposed</button>
   </div>
-  
+  <button id="theme-btn" onclick="toggleTheme()" style="padding:5px 14px;border-radius:20px;font-size:.72rem;font-family:monospace;cursor:pointer;border:1px solid var(--bdr);background:var(--surf);color:var(--mut2);white-space:nowrap;line-height:1;transition:all .15s;flex-shrink:0">&#9790; Dark</button>
 </div>
 <div class="nav">
   <div class="ntab active" onclick="sw(this,'ov')">Overview</div>
@@ -451,4 +467,20 @@ function buildCL(){
 }
 
 function togCK(key){CKS[key]=!CKS[key];clBuilt=false;buildCL();}
+
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light');
+  const btn=document.getElementById('theme-btn');
+  if(btn)btn.innerHTML=isLight?'&#9728; Light':'&#9790; Dark';
+  try{localStorage.setItem('spog-theme',isLight?'light':'dark');}catch(e){}
+}
+try{
+  if(localStorage.getItem('spog-theme')==='light'){
+    document.body.classList.add('light');
+    document.addEventListener('DOMContentLoaded',function(){
+      const b=document.getElementById('theme-btn');
+      if(b)b.innerHTML='&#9728; Light';
+    });
+  }
+}catch(e){}
 </script></body></html>
