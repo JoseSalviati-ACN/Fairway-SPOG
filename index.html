@@ -305,7 +305,7 @@ body.light .icard-val{color:#1a202c}
 </div>
 <script>
 (()=>{const stored=localStorage.getItem('spog-theme');if(stored==='light')document.body.classList.add('light');})();
-const DATA_DATE=new Date("2026-04-04T08:35:20");
+const DATA_DATE=new Date("2026-04-04T09:03:08");
 (()=>{
   const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit',hour12:true,weekday:'short',month:'short',day:'numeric'});
   const parts=fmt.formatToParts(DATA_DATE);
@@ -785,10 +785,10 @@ function renderDeliverables(){
   const issuesPct=pct(d.issues_resolved,d.issues_raised);
   const totalActs=(d.acts_tminus||0)+(d.acts_tzero||0);
   let h=`<div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
-  <div class="scard"><div class="scard-lbl">Waves Completed</div><div class="scard-val">${fmt(d.waves_complete)}</div><div class="scard-sub">COE/Waves at 100%</div></div>
-  <div class="scard"><div class="scard-lbl">EAIs Cutover</div><div class="scard-val">${fmt(d.eais_cutover)}</div><div class="scard-sub">Non-retain applications</div></div>
-  <div class="scard"><div class="scard-lbl">Issues Resolved</div><div class="scard-val">${fmt(d.issues_resolved)}</div><div class="scard-sub">${issuesPct}% of ${fmt(d.issues_raised)} raised</div></div>
-  <div class="scard"><div class="scard-lbl">Activities Completed</div><div class="scard-val">${fmt(totalActs)}</div><div class="scard-sub">${fmt(d.acts_tminus||0)} T-Minus &middot; ${fmt(d.acts_tzero||0)} T-Zero</div></div>
+  <div class="scard"><div class="scard-lbl">COE/Waves Completed</div><div class="scard-val">${fmt(d.waves_complete)}</div></div>
+  <div class="scard"><div class="scard-lbl">EAIs Cutover</div><div class="scard-val">${fmt(d.eais_cutover)}</div></div>
+  <div class="scard"><div class="scard-lbl">Issues Resolved</div><div class="scard-val">${fmt(d.issues_resolved)}</div></div>
+  <div class="scard"><div class="scard-lbl">Activities Completed</div><div class="scard-val">${fmt(totalActs)}</div></div>
   </div>`;
   const gateOrder=['Dev Build','SIT Testing','UAT Testing','Prod Build','MINS','FIRST'];
   h+=`<div class="sh" style="margin-top:6px">Phase Gate Completions</div>
