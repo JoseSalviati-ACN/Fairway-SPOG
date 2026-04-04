@@ -245,7 +245,7 @@ body.light .icard-val{color:#1a202c}
 </div>
 <div class="nav">
   <div class="ntab active" onclick="sw(this,'ov')">Overview</div>
-  <div class="ntab" onclick="sw(this,'del')">Fairway Deliverables</div>
+  <div class="ntab" onclick="sw(this,'exec')">Executive Summary</div>
   <div class="ntab" onclick="sw(this,'disp')">Disposition</div>
   <div class="ntab" onclick="sw(this,'act')">Activity Breakdown</div>
   <div class="ntab" onclick="sw(this,'sc')">EAI Scorecard</div>
@@ -254,7 +254,6 @@ body.light .icard-val{color:#1a202c}
   <div class="ntab" onclick="sw(this,'ins2')">COE/Wave Insights</div>
   <div class="ntab" onclick="sw(this,'cr')">Cutover CRs</div>
   <div class="ntab" onclick="sw(this,'ask')">Ask the SPOG</div>
-  <div class="ntab" onclick="sw(this,'exec')">Executive Summary</div>
 </div>
 <div class="main">
 <div id="ov" class="tab active"><div class="stat-row" id="ov-stats"></div>
@@ -265,10 +264,9 @@ body.light .icard-val{color:#1a202c}
 <th style="text-align:center">Overall</th><th>Issues</th><th>Activities</th><th>Checklist</th>
 <th>EAI Scorecard</th><th>Subjective</th>
 </tr></thead><tbody id="ov-body"></tbody></table></div></div>
-<div id="del" class="tab">
-<div class="sh">Fairway Deliverables</div>
-<p class="section-note">Cumulative totals across all completed COE/Waves to date &middot; Values frozen at build time</p>
-<div id="del-content"></div>
+<div id="exec" class="tab">
+  <div class="sh">Executive Summary</div>
+  <div id="exec-body"></div>
 </div>
 <div id="disp" class="tab"><div class="sh">L1 Sub-Disposition by COE/Wave</div>
 <p class="section-note">Unique app counts per wave per L1 sub-disposition. Source: Wave Bundle Summary Report.</p>
@@ -303,10 +301,6 @@ body.light .icard-val{color:#1a202c}
 <div id="ask" class="tab"><div class="uc"><span style="font-size:1.4rem">&#x1F6A7;</span>
 <div class="uc-txt"><strong>Ask the SPOG &mdash; Under Construction</strong><br>Awaiting Accenture approval for the required API access.</div>
 </div></div>
-<div id="exec" class="tab">
-  <div class="sh">Executive Summary</div>
-  <div id="exec-body"></div>
-</div>
 </div>
 <script>
 (()=>{const stored=localStorage.getItem('spog-theme');if(stored==='light')document.body.classList.add('light');})();
