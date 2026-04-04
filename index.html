@@ -305,7 +305,7 @@ body.light .icard-val{color:#1a202c}
 </div>
 <script>
 (()=>{const stored=localStorage.getItem('spog-theme');if(stored==='light')document.body.classList.add('light');})();
-const DATA_DATE=new Date("2026-04-04T09:03:08");
+const DATA_DATE=new Date("2026-04-04T09:05:33");
 (()=>{
   const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit',hour12:true,weekday:'short',month:'short',day:'numeric'});
   const parts=fmt.formatToParts(DATA_DATE);
@@ -790,20 +790,6 @@ function renderDeliverables(){
   <div class="scard"><div class="scard-lbl">Issues Resolved</div><div class="scard-val">${fmt(d.issues_resolved)}</div></div>
   <div class="scard"><div class="scard-lbl">Activities Completed</div><div class="scard-val">${fmt(totalActs)}</div></div>
   </div>`;
-  const gateOrder=['Dev Build','SIT Testing','UAT Testing','Prod Build','MINS','FIRST'];
-  h+=`<div class="sh" style="margin-top:6px">Phase Gate Completions</div>
-  <p class="section-note">Completed waves only.</p>
-  <div class="ovscroll" style="margin-bottom:22px"><table>
-  <thead><tr><th>Gate</th><th>Completed</th><th>Required</th><th>%</th><th>Progress</th></tr></thead><tbody>`;
-  let totC=0,totR=0;
-  for(const g of gateOrder){
-    const gd=(d.gates&&d.gates[g])||{comp:0,req:0};
-    const p=pct(gd.comp,gd.req);
-    const col=p===100?'#22c55e':p>=90?'#f59e0b':p>0?'#ef4444':'#4f6ef7';
-    totC+=gd.comp;totR+=gd.req;
-    h+=`<tr><td>${g}</td><td>${fmt(gd.comp)}</td><td>${fmt(gd.req)}</td><td><span class="gc ${gcls(p)}">${p}%</span></td><td>${bar(p,col)}</td></tr>`;
-  }
-  h+=`<tr class="total-row"><td>Total</td><td>${fmt(totC)}</td><td>${fmt(totR)}</td><td>${pct(totC,totR)}%</td><td></td></tr></tbody></table></div>`;
   if(d.eai_by_disp&&Object.keys(d.eai_by_disp).length){
     const entries=Object.entries(d.eai_by_disp).sort((a,b)=>b[1]-a[1]);
     const dispTotal=entries.reduce((s,[,v])=>s+v,0);
