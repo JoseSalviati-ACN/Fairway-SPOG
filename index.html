@@ -1047,6 +1047,69 @@ function buildExec(){
     </tr>`;
   }).filter(r=>r).join('');
 
+  // ── Waves in flight (next 30 days) ──────────────────────────────────────────
+  // Align to Monday-based calendar weeks
+  const dow=TODAY.getDay(); // 0=Sun … 6=Sat
+  const daysToMon=dow===0?-6:1-dow;
+  const thisMonday=new Date(TODAY);thisMonday.setDate(TODAY.getDate()+daysToMon);thisMonday.setHours(0,0,0,0);
+  const weekStarts=[0,1,2,3].map(i=>{const d=new Date(thisMonday);d.setDate(thisMonday.getDate()+i*7);return d;});
+  const weekLabels=(()=>{
+    const mf=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric'});
+    return weekStarts.map((ws,i)=>{
+      const we=new Date(ws);we.setDate(ws.getDate()+6);
+      const range=`${mf.format(ws)} – ${mf.format(we)}`;
+      if(i===0)return{label:'This Week',range};
+      if(i===1)return{label:'Next Week',range};
+      return{label:`Week of ${mf.format(ws)}`,range};
+    });
+  })();
+  const cutoverEnd=new Date(TODAY);cutoverEnd.setDate(TODAY.getDate()+30);cutoverEnd.setHours(23,59,59,999);
+  const inFlightWaves=FW.filter(w=>{
+    if(!w.cutover||calcOverall(w)==='Complete')return false;
+    const co=new Date(w.cutover+'T12:00:00');
+    return co>=TODAY&&co<=cutoverEnd;
+  }).sort((a,b)=>a.cutover.localeCompare(b.cutover));
+
+  const mfShort=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric'});
+  const weekBuckets=weekStarts.map((ws,wi)=>{
+    const we=new Date(ws);we.setDate(ws.getDate()+7);
+    const waves=inFlightWaves.filter(w=>{
+      const co=new Date(w.cutover+'T12:00:00');return co>=ws&&co<we;
+    });
+    if(!waves.length)return'';
+    const cards=waves.map(w=>{
+      const overall=calcOverall(w);
+      const pct=Math.min(w.pct_comp,100);
+      const barColor=overall==='Behind'?'#ef4444':overall==='At Risk'?'#f59e0b':overall==='Complete'?'#3b82f6':'#22c55e';
+      const coDt=new Date(w.cutover+'T12:00:00');
+      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="COE/Wave ${w.name}">COE/Wave ${w.name}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <div class="pbwrap" style="flex:1;height:5px"><div class="pbact" style="width:${pct}%;background:${barColor};height:100%"></div></div>
+            <span style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--mut2);flex-shrink:0">${fp(w.pct_comp)}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          ${rh(overall)}
+          <span style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--mut)">Cutover ${mfShort.format(coDt)}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return`<div style="margin-bottom:16px">
+      <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--mut2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bdr)">
+        <span style="color:var(--txt);font-weight:600">${weekLabels[wi].label}</span>&ensp;·&ensp;${weekLabels[wi].range}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px">${cards}</div>
+    </div>`;
+  }).join('');
+
+  const inFlightSection=`
+    <div style="margin-bottom:22px">
+      <div class="sh" style="font-size:.9rem;margin-bottom:14px">Waves in Flight &mdash; Next 30 Days</div>
+      ${weekBuckets||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:var(--mut)">No waves cutting over in the next 30 days</div>`}
+    </div>`;
+
   const attnWaves=FW.filter(w=>calcOverall(w)==="Behind"||calcOverall(w)==="At Risk").map(w=>{
     const overall=calcOverall(w);
     return`<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px">
@@ -1120,6 +1183,8 @@ function buildExec(){
         ${attnWaves||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:#276221">&#10003;&nbsp; No waves are At Risk or Behind</div>`}
       </div>
     </div>
+
+    ${inFlightSection}
   `;
 }
 
