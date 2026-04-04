@@ -1000,7 +1000,9 @@ function buildExec(){
   const ot=FW.filter(w=>calcOverall(w)==="On Track").length;
   const ar=FW.filter(w=>calcOverall(w)==="At Risk").length;
   const bh=FW.filter(w=>calcOverall(w)==="Behind").length;
-  const openIss=FW.reduce((s,w)=>s+w.issues.open,0);
+  const openIss=(DELIVERABLES&&DELIVERABLES.issues_raised!=null)
+    ?(DELIVERABLES.issues_raised-DELIVERABLES.issues_resolved)
+    :FW.reduce((s,w)=>s+w.issues.open,0);
   const critIss=FW.reduce((s,w)=>s+w.issues.critical,0);
   const blockIss=FW.reduce((s,w)=>s+w.issues.blocker,0);
   const highIss=FW.reduce((s,w)=>s+w.issues.high,0);
