@@ -254,6 +254,7 @@ body.light .icard-val{color:#1a202c}
   <div class="ntab" onclick="sw(this,'ins2')">COE/Wave Insights</div>
   <div class="ntab" onclick="sw(this,'cr')">Cutover CRs</div>
   <div class="ntab" onclick="sw(this,'ask')">Ask the SPOG</div>
+  <div class="ntab" onclick="sw(this,'exec')">Executive Summary</div>
 </div>
 <div class="main">
 <div id="ov" class="tab active"><div class="stat-row" id="ov-stats"></div>
@@ -302,6 +303,10 @@ body.light .icard-val{color:#1a202c}
 <div id="ask" class="tab"><div class="uc"><span style="font-size:1.4rem">&#x1F6A7;</span>
 <div class="uc-txt"><strong>Ask the SPOG &mdash; Under Construction</strong><br>Awaiting Accenture approval for the required API access.</div>
 </div></div>
+<div id="exec" class="tab">
+  <div class="sh">Executive Summary</div>
+  <div id="exec-body"></div>
+</div>
 </div>
 <script>
 (()=>{const stored=localStorage.getItem('spog-theme');if(stored==='light')document.body.classList.add('light');})();
@@ -834,6 +839,7 @@ function sw(el,id){
   if(id==="iss"&&!issBuilt)buildIss();
   if(id==="cl"&&!clBuilt)buildCL();
   if(id==="ins2"&&!ins2Built)buildIns2();
+  if(id==="exec"&&!execBuilt)buildExec();
   if(id==="disp")buildDisp();
   if(id==="cr"&&!crBuilt){buildCRSummary();buildCRPills();renderCRs();crBuilt=true;}
 }
@@ -990,6 +996,132 @@ function jumpToIssueFromCR(issueId){
 }
 
 let ins2Built=false;
+let execBuilt=false;
+
+function buildExec(){
+  execBuilt=true;
+  const FW=filteredWaves();
+  const tot=FW.length;
+  const comp=FW.filter(w=>calcOverall(w)==="Complete").length;
+  const ot=FW.filter(w=>calcOverall(w)==="On Track").length;
+  const ar=FW.filter(w=>calcOverall(w)==="At Risk").length;
+  const bh=FW.filter(w=>calcOverall(w)==="Behind").length;
+  const totAct=FW.reduce((s,w)=>s+w.total,0);
+  const compAct=FW.reduce((s,w)=>s+w.completed,0);
+  const pctComp=totAct>0?((compAct/totAct)*100).toFixed(1):0;
+  const openIss=FW.reduce((s,w)=>s+w.issues.open,0);
+  const critIss=FW.reduce((s,w)=>s+w.issues.critical,0);
+  const blockIss=FW.reduce((s,w)=>s+w.issues.blocker,0);
+  const highIss=FW.reduce((s,w)=>s+w.issues.high,0);
+  const lateAct=FW.reduce((s,w)=>s+w.late,0);
+  const totEAI=FW.reduce((s,w)=>s+w.eai_count,0);
+
+  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const dateStr=fmt.format(DATA_DATE);
+
+  let healthVerdict,healthColor;
+  if(bh>0){healthVerdict='Behind Schedule';healthColor='#9C0006';}
+  else if(ar>0){healthVerdict='Attention Required';healthColor='#9C5700';}
+  else if(comp===tot){healthVerdict='Portfolio Complete';healthColor='#1F497D';}
+  else{healthVerdict='On Track';healthColor='#276221';}
+
+  const waveNum=n=>(n.match(/^[\d.]+/)||[''])[0];
+  const podRows=Object.entries(POD_WAVES).map(([pod,waveNames])=>{
+    const podWaves=FW.filter(w=>waveNames.some(n=>{const num=waveNum(n);return num&&w.name.startsWith(num+'-');}));
+    if(!podWaves.length)return'';
+    const pc=podWaves.filter(w=>calcOverall(w)==="Complete").length;
+    const pot=podWaves.filter(w=>calcOverall(w)==="On Track").length;
+    const par=podWaves.filter(w=>calcOverall(w)==="At Risk").length;
+    const pbh=podWaves.filter(w=>calcOverall(w)==="Behind").length;
+    const podIss=podWaves.reduce((s,w)=>s+w.issues.open,0);
+    const podRag=pbh>0?"Behind":par>0?"At Risk":pot>0?"On Track":"Complete";
+    return`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600">${pod}</td>
+      <td>${podWaves.length}</td>
+      <td>${pc}</td>
+      <td>${pot}</td>
+      <td>${par}</td>
+      <td>${pbh}</td>
+      <td>${podIss}</td>
+      <td>${rh(podRag)}</td>
+    </tr>`;
+  }).filter(r=>r).join('');
+
+  const attnWaves=FW.filter(w=>calcOverall(w)==="Behind"||calcOverall(w)==="At Risk").map(w=>{
+    const overall=calcOverall(w);
+    return`<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px">
+      <div style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem;color:var(--mut2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">COE/Wave ${w.name}</div>
+      <div style="font-family:monospace;font-size:.72rem;color:var(--mut);flex-shrink:0">${fd(w.cutover)}</div>
+      <div style="flex-shrink:0">${rh(overall)}</div>
+      ${w.issues.open>0?`<span style="font-family:'DM Mono',monospace;font-size:.7rem;color:#9C0006;flex-shrink:0">${w.issues.open} open issue${w.issues.open>1?'s':''}</span>`:''}
+    </div>`;
+  }).join('');
+
+  const pctDone=tot>0?Math.round(comp/tot*100):0;
+
+  document.getElementById('exec-body').innerHTML=`
+    <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:22px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">State of the Project as of</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;color:#fff">${dateStr}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:4px">Project Fairway &mdash; FedEx Freight Separation</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <div style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--mut2)">Overall Status:</div>
+        <div style="background:${healthColor}22;color:${healthColor};border:1px solid ${healthColor};border-radius:6px;padding:5px 18px;font-family:'DM Mono',monospace;font-size:.82rem;font-weight:700">${healthVerdict}</div>
+      </div>
+    </div>
+
+    <div class="stat-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:22px">
+      ${[
+        {l:"COEs / Waves",v:tot,s:totEAI.toLocaleString()+" total EAIs"},
+        {l:"Complete",v:comp,s:pctDone+"% of portfolio"},
+        {l:"On Track",v:ot,s:"Active &amp; progressing"},
+        {l:"At Risk / Behind",v:ar+bh,s:ar+" at risk &middot; "+bh+" behind"},
+        {l:"Open Issues",v:openIss,s:(critIss+blockIss)+" critical/blocker &middot; "+highIss+" high"}
+      ].map(c=>`<div class="scard"><div class="scard-lbl">${c.l}</div><div class="scard-val">${c.v}</div><div class="scard-sub">${c.s}</div></div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px">
+      <div>
+        <div class="sh" style="font-size:.9rem;margin-bottom:12px">Portfolio Status by Pod</div>
+        <table>
+          <thead><tr>
+            <th style="text-align:left">Pod</th>
+            <th>Waves</th>
+            <th style="background:#1F497D">Complete</th>
+            <th style="background:#276221">On Track</th>
+            <th style="background:#9C5700">At Risk</th>
+            <th style="background:#9C0006">Behind</th>
+            <th>Issues</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>${podRows||'<tr><td colspan="8" style="color:var(--mut);text-align:center;font-family:monospace;font-size:.8rem">No data for current filter</td></tr>'}</tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="sh" style="font-size:.9rem;margin-bottom:12px">Activity Completion</div>
+        <div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:18px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+            <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.06em">Activities Completed</span>
+            <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:#fff">${pctComp}%</span>
+          </div>
+          <div class="pbwrap" style="height:10px;margin-bottom:8px">
+            <div class="pbact" style="width:${Math.min(pctComp,100)}%;background:#4f6ef7;height:100%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2)">${compAct.toLocaleString()} of ${totAct.toLocaleString()} activities</span>
+            <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:${lateAct>0?'#9C5700':'var(--mut2)'};">${lateAct} late activit${lateAct===1?'y':'ies'}</span>
+          </div>
+        </div>
+
+        <div class="sh" style="font-size:.9rem;margin-bottom:12px">Waves Requiring Attention</div>
+        ${attnWaves||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:#276221">&#10003;&nbsp; No waves are At Risk or Behind</div>`}
+      </div>
+    </div>
+  `;
+}
 
 function buildIns2(){
   ins2Built=true;
