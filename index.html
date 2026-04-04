@@ -1006,15 +1006,25 @@ function buildExec(){
   const ot=FW.filter(w=>calcOverall(w)==="On Track").length;
   const ar=FW.filter(w=>calcOverall(w)==="At Risk").length;
   const bh=FW.filter(w=>calcOverall(w)==="Behind").length;
-  const totAct=FW.reduce((s,w)=>s+w.total,0);
-  const compAct=FW.reduce((s,w)=>s+w.completed,0);
-  const pctComp=totAct>0?((compAct/totAct)*100).toFixed(1):0;
   const openIss=FW.reduce((s,w)=>s+w.issues.open,0);
   const critIss=FW.reduce((s,w)=>s+w.issues.critical,0);
   const blockIss=FW.reduce((s,w)=>s+w.issues.blocker,0);
   const highIss=FW.reduce((s,w)=>s+w.issues.high,0);
-  const lateAct=FW.reduce((s,w)=>s+w.late,0);
   const totEAI=FW.reduce((s,w)=>s+w.eai_count,0);
+  const pctDone=tot>0?Math.round(comp/tot*100):0;
+
+  // EAIs moved: DELIVERABLES when available, else sum eai_count from complete waves
+  const compWaves=FW.filter(w=>calcOverall(w)==="Complete");
+  const eaisMoved=(DELIVERABLES&&DELIVERABLES.eais_cutover!=null)
+    ?DELIVERABLES.eais_cutover
+    :compWaves.reduce((s,w)=>s+w.eai_count,0);
+
+  // T-minus + T-zero activities: DELIVERABLES when available, else total completed activities in complete waves
+  const hasDlvActs=(DELIVERABLES&&DELIVERABLES.acts_tminus!=null&&DELIVERABLES.acts_tzero!=null);
+  const cutoverActs=hasDlvActs
+    ?(DELIVERABLES.acts_tminus+DELIVERABLES.acts_tzero)
+    :compWaves.reduce((s,w)=>s+w.completed,0);
+  const cutoverActsLabel=hasDlvActs?'T&#8209;minus &amp; T&#8209;zero activities executed':'activities completed across finished waves';
 
   const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const dateStr=fmt.format(DATA_DATE);
@@ -1022,34 +1032,41 @@ function buildExec(){
   let healthVerdict,healthColor;
   if(bh>0){healthVerdict='Behind Schedule';healthColor='#9C0006';}
   else if(ar>0){healthVerdict='Attention Required';healthColor='#9C5700';}
-  else if(comp===tot){healthVerdict='Portfolio Complete';healthColor='#1F497D';}
+  else if(comp===tot&&tot>0){healthVerdict='Portfolio Complete';healthColor='#1F497D';}
   else{healthVerdict='On Track';healthColor='#276221';}
 
-  const waveNum=n=>(n.match(/^[\d.]+/)||[''])[0];
-  const podRows=Object.entries(POD_WAVES).map(([pod,waveNames])=>{
-    const podWaves=FW.filter(w=>waveNames.some(n=>{const num=waveNum(n);return num&&w.name.startsWith(num+'-');}));
-    if(!podWaves.length)return'';
-    const pc=podWaves.filter(w=>calcOverall(w)==="Complete").length;
-    const pot=podWaves.filter(w=>calcOverall(w)==="On Track").length;
-    const par=podWaves.filter(w=>calcOverall(w)==="At Risk").length;
-    const pbh=podWaves.filter(w=>calcOverall(w)==="Behind").length;
-    const podIss=podWaves.reduce((s,w)=>s+w.issues.open,0);
-    const podRag=pbh>0?"Behind":par>0?"At Risk":pot>0?"On Track":"Complete";
-    return`<tr>
-      <td style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600">${pod}</td>
-      <td>${podWaves.length}</td>
-      <td>${pc}</td>
-      <td>${pot}</td>
-      <td>${par}</td>
-      <td>${pbh}</td>
-      <td>${podIss}</td>
-      <td>${rh(podRag)}</td>
-    </tr>`;
-  }).filter(r=>r).join('');
+  // ── Section 1: Program Completion Overview ───────────────────────────────────
+  const overviewHtml=`
+    <div style="background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:22px 26px;margin-bottom:22px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">State of the Project &mdash; ${dateStr}</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.25rem;color:#fff">Program Completion Overview</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:2px">Project Fairway &middot; FedEx Freight Separation</div>
+        </div>
+        <div style="background:${healthColor}18;color:${healthColor};border:1px solid ${healthColor}55;border-radius:8px;padding:7px 20px;font-family:'DM Mono',monospace;font-size:.82rem;font-weight:700;flex-shrink:0;align-self:center">${healthVerdict}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+        <div style="border-left:3px solid #4f6ef7;padding-left:14px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;color:#fff;line-height:1">${comp} <span style="font-size:1rem;color:var(--mut2)">of ${tot}</span></div>
+          <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:3px">Waves complete</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.78rem;color:#4f6ef7;font-weight:700;margin-top:2px">${pctDone}% of portfolio</div>
+        </div>
+        <div style="border-left:3px solid #22c55e;padding-left:14px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;color:#fff;line-height:1">${eaisMoved.toLocaleString()}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:3px">EAIs successfully moved</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--mut2);margin-top:2px">${totEAI.toLocaleString()} total EAIs in scope</div>
+        </div>
+        <div style="border-left:3px solid #f59e0b;padding-left:14px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;color:#fff;line-height:1">${cutoverActs.toLocaleString()}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:3px">${cutoverActsLabel}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.78rem;color:${openIss>0?'#9C5700':'var(--mut2)'};margin-top:2px">${openIss} open issue${openIss!==1?'s':''} &middot; ${critIss+blockIss} critical/blocker</div>
+        </div>
+      </div>
+    </div>`;
 
-  // ── Waves in flight (next 30 days) ──────────────────────────────────────────
-  // Align to Monday-based calendar weeks
-  const dow=TODAY.getDay(); // 0=Sun … 6=Sat
+  // ── Section 2: Waves in Flight ───────────────────────────────────────────────
+  const dow=TODAY.getDay();
   const daysToMon=dow===0?-6:1-dow;
   const thisMonday=new Date(TODAY);thisMonday.setDate(TODAY.getDate()+daysToMon);thisMonday.setHours(0,0,0,0);
   const weekStarts=[0,1,2,3].map(i=>{const d=new Date(thisMonday);d.setDate(thisMonday.getDate()+i*7);return d;});
@@ -1057,7 +1074,7 @@ function buildExec(){
     const mf=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric'});
     return weekStarts.map((ws,i)=>{
       const we=new Date(ws);we.setDate(ws.getDate()+6);
-      const range=`${mf.format(ws)} – ${mf.format(we)}`;
+      const range=`${mf.format(ws)} \u2013 ${mf.format(we)}`;
       if(i===0)return{label:'This Week',range};
       if(i===1)return{label:'Next Week',range};
       return{label:`Week of ${mf.format(ws)}`,range};
@@ -1069,20 +1086,17 @@ function buildExec(){
     const co=new Date(w.cutover+'T12:00:00');
     return co>=TODAY&&co<=cutoverEnd;
   }).sort((a,b)=>a.cutover.localeCompare(b.cutover));
-
   const mfShort=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric'});
   const weekBuckets=weekStarts.map((ws,wi)=>{
     const we=new Date(ws);we.setDate(ws.getDate()+7);
-    const waves=inFlightWaves.filter(w=>{
-      const co=new Date(w.cutover+'T12:00:00');return co>=ws&&co<we;
-    });
+    const waves=inFlightWaves.filter(w=>{const co=new Date(w.cutover+'T12:00:00');return co>=ws&&co<we;});
     if(!waves.length)return'';
     const cards=waves.map(w=>{
       const overall=calcOverall(w);
       const pct=Math.min(w.pct_comp,100);
       const barColor=overall==='Behind'?'#ef4444':overall==='At Risk'?'#f59e0b':overall==='Complete'?'#3b82f6':'#22c55e';
       const coDt=new Date(w.cutover+'T12:00:00');
-      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px">
+      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surf2);border:1px solid var(--bdr);border-radius:8px">
         <div style="flex:1;min-width:0">
           <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="COE/Wave ${w.name}">COE/Wave ${w.name}</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
@@ -1098,21 +1112,34 @@ function buildExec(){
     }).join('');
     return`<div style="margin-bottom:16px">
       <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--mut2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--bdr)">
-        <span style="color:var(--txt);font-weight:600">${weekLabels[wi].label}</span>&ensp;·&ensp;${weekLabels[wi].range}
+        <span style="color:var(--txt);font-weight:600">${weekLabels[wi].label}</span>&ensp;&middot;&ensp;${weekLabels[wi].range}
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px">${cards}</div>
     </div>`;
   }).join('');
 
-  const inFlightSection=`
-    <div style="margin-bottom:22px">
-      <div class="sh" style="font-size:.9rem;margin-bottom:14px">Waves in Flight &mdash; Next 30 Days</div>
-      ${weekBuckets||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:var(--mut)">No waves cutting over in the next 30 days</div>`}
-    </div>`;
+  // Pod status table
+  const waveNum=n=>(n.match(/^[\d.]+/)||[''])[0];
+  const podRows=Object.entries(POD_WAVES).map(([pod,waveNames])=>{
+    const podWaves=FW.filter(w=>waveNames.some(n=>{const num=waveNum(n);return num&&w.name.startsWith(num+'-');}));
+    if(!podWaves.length)return'';
+    const pc=podWaves.filter(w=>calcOverall(w)==="Complete").length;
+    const pot=podWaves.filter(w=>calcOverall(w)==="On Track").length;
+    const par=podWaves.filter(w=>calcOverall(w)==="At Risk").length;
+    const pbh=podWaves.filter(w=>calcOverall(w)==="Behind").length;
+    const podIss=podWaves.reduce((s,w)=>s+w.issues.open,0);
+    const podRag=pbh>0?"Behind":par>0?"At Risk":pot>0?"On Track":"Complete";
+    return`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600">${pod}</td>
+      <td>${podWaves.length}</td><td>${pc}</td><td>${pot}</td><td>${par}</td><td>${pbh}</td>
+      <td>${podIss}</td><td>${rh(podRag)}</td>
+    </tr>`;
+  }).filter(r=>r).join('');
 
+  // Waves requiring attention
   const attnWaves=FW.filter(w=>calcOverall(w)==="Behind"||calcOverall(w)==="At Risk").map(w=>{
     const overall=calcOverall(w);
-    return`<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px">
+    return`<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surf2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px">
       <div style="flex:1;font-family:'DM Mono',monospace;font-size:.73rem;color:var(--mut2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">COE/Wave ${w.name}</div>
       <div style="font-family:monospace;font-size:.72rem;color:var(--mut);flex-shrink:0">${fd(w.cutover)}</div>
       <div style="flex-shrink:0">${rh(overall)}</div>
@@ -1120,71 +1147,98 @@ function buildExec(){
     </div>`;
   }).join('');
 
-  const pctDone=tot>0?Math.round(comp/tot*100):0;
+  const inFlightHtml=`
+    <div style="margin-bottom:22px">
+      <div class="sh" style="font-size:.9rem;margin-bottom:14px">Waves in Flight &mdash; Next 30 Days</div>
+      ${weekBuckets||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:var(--mut)">No waves cutting over in the next 30 days</div>`}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px">
+        <div>
+          <div class="sh" style="font-size:.85rem;margin-bottom:10px">Portfolio Status by Pod</div>
+          <table>
+            <thead><tr>
+              <th style="text-align:left">Pod</th><th>Waves</th>
+              <th style="background:#1F497D">Done</th><th style="background:#276221">On Track</th>
+              <th style="background:#9C5700">At Risk</th><th style="background:#9C0006">Behind</th>
+              <th>Issues</th><th>Status</th>
+            </tr></thead>
+            <tbody>${podRows||'<tr><td colspan="8" style="color:var(--mut);text-align:center;font-family:monospace;font-size:.8rem">No data</td></tr>'}</tbody>
+          </table>
+        </div>
+        <div>
+          <div class="sh" style="font-size:.85rem;margin-bottom:10px">Waves Requiring Attention</div>
+          ${attnWaves||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:#276221">&#10003;&nbsp; No waves are At Risk or Behind</div>`}
+        </div>
+      </div>
+    </div>`;
+
+  // ── Section 3: Wave Status by Group ─────────────────────────────────────────
+  // Primary: DELIVERABLES.wave_groups (Build/SIT/Cutover) when populated by build
+  // Fallback: group W waves by integer wave-number prefix (COE 22.x, 24.x, etc.)
+  let groupHtml='';
+  if(DELIVERABLES&&DELIVERABLES.wave_groups&&Object.keys(DELIVERABLES.wave_groups).length){
+    const groupOrder=['Build','SIT','Cutover','Others'];
+    const total=Object.values(DELIVERABLES.wave_groups).reduce((s,v)=>s+v,0);
+    const fmt2=n=>Number(n).toLocaleString();
+    const rows=groupOrder.map(g=>{
+      const cnt=DELIVERABLES.wave_groups[g]||0;
+      if(!cnt)return'';
+      const pct=total>0?Math.round(cnt/total*100):0;
+      return`<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:.78rem">${g}</td>
+        <td>${fmt2(cnt)}</td>
+        <td>${pct}%</td>
+        <td><div class="pbwrap" style="min-width:120px"><div class="pbact" style="width:${pct}%;background:#4f6ef7"></div></div></td>
+      </tr>`;
+    }).filter(r=>r).join('');
+    groupHtml=`<table>
+      <thead><tr><th style="text-align:left">Wave Group</th><th>Waves Complete</th><th>% of Total</th><th>Distribution</th></tr></thead>
+      <tbody>${rows}<tr class="total-row"><td>Total</td><td>${fmt2(total)}</td><td>100%</td><td></td></tr></tbody>
+    </table>`;
+  } else {
+    // Compute from W: group by integer part of wave number prefix
+    const groupMap={};
+    FW.forEach(w=>{
+      const key=Math.floor(parseFloat((w.name.match(/^[\d.]+/)||['0'])[0])||0);
+      if(!groupMap[key])groupMap[key]=[];
+      groupMap[key].push(w);
+    });
+    const groupCards=Object.keys(groupMap).map(Number).sort((a,b)=>a-b).map(key=>{
+      const gWaves=groupMap[key];
+      const gc=gWaves.filter(w=>calcOverall(w)==="Complete").length;
+      const gTot=gWaves.length;
+      const gRag=gWaves.some(w=>calcOverall(w)==="Behind")?"Behind":
+                 gWaves.some(w=>calcOverall(w)==="At Risk")?"At Risk":
+                 gWaves.some(w=>calcOverall(w)==="On Track")?"On Track":"Complete";
+      const waveLines=gWaves.map(w=>{
+        const overall=calcOverall(w);
+        const pct=Math.min(w.pct_comp,100);
+        const barColor=overall==='Behind'?'#ef4444':overall==='At Risk'?'#f59e0b':overall==='Complete'?'#3b82f6':'#22c55e';
+        return`<div style="display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:5px">
+          <div style="flex:1;font-family:'DM Mono',monospace;font-size:.68rem;color:var(--mut2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.name}</div>
+          <div class="pbwrap" style="width:70px;flex-shrink:0;height:4px"><div class="pbact" style="width:${pct}%;background:${barColor};height:100%"></div></div>
+          <span style="font-family:'DM Mono',monospace;font-size:.67rem;color:var(--mut2);width:34px;text-align:right;flex-shrink:0">${fp(w.pct_comp)}</span>
+          <div style="flex-shrink:0;width:72px;text-align:right">${rh(overall)}</div>
+        </div>`;
+      }).join('');
+      return`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bdr);background:var(--surf2)">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;color:#fff;flex:1">COE ${key}${gTot>1?` &mdash; ${gTot} waves`:''}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--mut2)">${gc}/${gTot} complete</div>
+          <div>${rh(gRag)}</div>
+        </div>
+        <div style="padding:6px 8px">${waveLines}</div>
+      </div>`;
+    }).join('');
+    groupHtml=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px">${groupCards}</div>`;
+  }
 
   document.getElementById('exec-body').innerHTML=`
-    <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:22px;flex-wrap:wrap">
-      <div>
-        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">State of the Project as of</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;color:#fff">${dateStr}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:4px">Project Fairway &mdash; FedEx Freight Separation</div>
-      </div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0">
-        <div style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--mut2)">Overall Status:</div>
-        <div style="background:${healthColor}22;color:${healthColor};border:1px solid ${healthColor};border-radius:6px;padding:5px 18px;font-family:'DM Mono',monospace;font-size:.82rem;font-weight:700">${healthVerdict}</div>
-      </div>
+    ${overviewHtml}
+    ${inFlightHtml}
+    <div style="margin-bottom:22px">
+      <div class="sh" style="font-size:.9rem;margin-bottom:14px">Wave Status by Group</div>
+      ${groupHtml}
     </div>
-
-    <div class="stat-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:22px">
-      ${[
-        {l:"COEs / Waves",v:tot,s:totEAI.toLocaleString()+" total EAIs"},
-        {l:"Complete",v:comp,s:pctDone+"% of portfolio"},
-        {l:"On Track",v:ot,s:"Active &amp; progressing"},
-        {l:"At Risk / Behind",v:ar+bh,s:ar+" at risk &middot; "+bh+" behind"},
-        {l:"Open Issues",v:openIss,s:(critIss+blockIss)+" critical/blocker &middot; "+highIss+" high"}
-      ].map(c=>`<div class="scard"><div class="scard-lbl">${c.l}</div><div class="scard-val">${c.v}</div><div class="scard-sub">${c.s}</div></div>`).join('')}
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px">
-      <div>
-        <div class="sh" style="font-size:.9rem;margin-bottom:12px">Portfolio Status by Pod</div>
-        <table>
-          <thead><tr>
-            <th style="text-align:left">Pod</th>
-            <th>Waves</th>
-            <th style="background:#1F497D">Complete</th>
-            <th style="background:#276221">On Track</th>
-            <th style="background:#9C5700">At Risk</th>
-            <th style="background:#9C0006">Behind</th>
-            <th>Issues</th>
-            <th>Status</th>
-          </tr></thead>
-          <tbody>${podRows||'<tr><td colspan="8" style="color:var(--mut);text-align:center;font-family:monospace;font-size:.8rem">No data for current filter</td></tr>'}</tbody>
-        </table>
-      </div>
-
-      <div>
-        <div class="sh" style="font-size:.9rem;margin-bottom:12px">Activity Completion</div>
-        <div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:18px;margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
-            <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.06em">Activities Completed</span>
-            <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;color:#fff">${pctComp}%</span>
-          </div>
-          <div class="pbwrap" style="height:10px;margin-bottom:8px">
-            <div class="pbact" style="width:${Math.min(pctComp,100)}%;background:#4f6ef7;height:100%"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2)">${compAct.toLocaleString()} of ${totAct.toLocaleString()} activities</span>
-            <span style="font-family:'DM Mono',monospace;font-size:.72rem;color:${lateAct>0?'#9C5700':'var(--mut2)'};">${lateAct} late activit${lateAct===1?'y':'ies'}</span>
-          </div>
-        </div>
-
-        <div class="sh" style="font-size:.9rem;margin-bottom:12px">Waves Requiring Attention</div>
-        ${attnWaves||`<div style="background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:16px;text-align:center;font-family:'DM Mono',monospace;font-size:.8rem;color:#276221">&#10003;&nbsp; No waves are At Risk or Behind</div>`}
-      </div>
-    </div>
-
-    ${inFlightSection}
   `;
 }
 
