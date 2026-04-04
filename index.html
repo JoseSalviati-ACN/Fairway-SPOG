@@ -304,12 +304,12 @@ body.light .icard-val{color:#1a202c}
 </div>
 <script>
 (()=>{const stored=localStorage.getItem('spog-theme');if(stored==='light')document.body.classList.add('light');})();
-const DATA_DATE=new Date("2026-04-03"+"T12:00:00");
+const DATA_DATE=new Date("2026-04-04T10:13:36");
 (()=>{
-  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'short',month:'short',day:'numeric'});
+  const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit',hour12:true,weekday:'short',month:'short',day:'numeric'});
   const parts=fmt.formatToParts(DATA_DATE);
   const get=t=>parts.find(p=>p.type===t)?.value??'';
-  const ts=`As of ${get('weekday')}, ${get('month')} ${get('day')}`;
+  const ts=`As of ${get('weekday')}, ${get('month')} ${get('day')} \u00b7 ${get('hour')}:${get('minute')} ${get('dayPeriod')} CT`;
   const el=document.getElementById('asof-ts');if(el)el.textContent=ts;
 })();
 const TODAY=new Date("2026-04-03"+"T12:00:00");
@@ -1020,6 +1020,14 @@ function buildExec(){
     :compWaves.reduce((s,w)=>s+w.completed,0);
   const cutoverActsLabel=hasDlvActs?'T&#8209;minus &amp; T&#8209;zero activities executed':'activities completed across finished waves';
 
+  // Closed issues: DELIVERABLES.issues_resolved when available, else total - open from W
+  const closedIss=(DELIVERABLES&&DELIVERABLES.issues_resolved!=null)
+    ?DELIVERABLES.issues_resolved
+    :FW.reduce((s,w)=>s+(w.issues.total-w.issues.open),0);
+  const totalIssues=(DELIVERABLES&&DELIVERABLES.issues_raised!=null)
+    ?DELIVERABLES.issues_raised
+    :FW.reduce((s,w)=>s+w.issues.total,0);
+
   const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const dateStr=fmt.format(DATA_DATE);
 
@@ -1055,6 +1063,11 @@ function buildExec(){
           <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;color:#fff;line-height:1">${cutoverActs.toLocaleString()}</div>
           <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:3px">${cutoverActsLabel}</div>
           <div style="font-family:'DM Mono',monospace;font-size:.78rem;color:${openIss>0?'#9C5700':'var(--mut2)'};margin-top:2px">${openIss} open issue${openIss!==1?'s':''} &middot; ${critIss+blockIss} critical/blocker</div>
+        </div>
+        <div style="border-left:3px solid #276221;padding-left:14px">
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;color:#fff;line-height:1">${closedIss.toLocaleString()}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.72rem;color:var(--mut2);margin-top:3px">Issues closed</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.78rem;color:var(--mut2);margin-top:2px">${totalIssues.toLocaleString()} total raised &middot; ${openIss} still open</div>
         </div>
       </div>
     </div>`;
