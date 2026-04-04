@@ -447,8 +447,6 @@ function rebuildOv(){
   const compAct=FW.reduce((s,w)=>s+w.completed,0);
   const openIss=FW.reduce((s,w)=>s+w.issues.open,0);
   const lateAct=FW.reduce((s,w)=>s+w.late,0);
-  const totAct=FW.reduce((s,w)=>s+w.total,0);
-  const compAct=FW.reduce((s,w)=>s+w.completed,0);
   const openAct=totAct-compAct;
   // Add non-myNav completed waves (Build, SIT, etc.) from DELIVERABLES
   const nonMyNavComp=(DELIVERABLES&&DELIVERABLES.wave_groups)?Object.entries(DELIVERABLES.wave_groups).filter(([g])=>g!=='Cutover').reduce((s,[,v])=>s+v,0):0;
