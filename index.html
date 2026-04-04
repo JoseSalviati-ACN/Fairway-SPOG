@@ -305,7 +305,7 @@ body.light .icard-val{color:#1a202c}
 </div>
 <script>
 (()=>{const stored=localStorage.getItem('spog-theme');if(stored==='light')document.body.classList.add('light');})();
-const DATA_DATE=new Date("2026-04-04T09:57:24");
+const DATA_DATE=new Date("2026-04-04T10:13:36");
 (()=>{
   const fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit',hour12:true,weekday:'short',month:'short',day:'numeric'});
   const parts=fmt.formatToParts(DATA_DATE);
@@ -448,9 +448,12 @@ function rebuildOv(){
   const compAct=FW.reduce((s,w)=>s+w.completed,0);
   const openIss=FW.reduce((s,w)=>s+w.issues.open,0);
   const lateAct=FW.reduce((s,w)=>s+w.late,0);
+  // Add non-myNav completed waves (Build, SIT, etc.) from DELIVERABLES
+  const nonMyNavComp=(DELIVERABLES&&DELIVERABLES.wave_groups)?Object.entries(DELIVERABLES.wave_groups).filter(([g])=>g!=='Cutover').reduce((s,[,v])=>s+v,0):0;
+  const compAll=comp+nonMyNavComp;
   document.getElementById("ov-stats").innerHTML=[
     {l:"Total Waves",v:tot,s:"across all pods"},
-    {l:"Complete",v:comp,s:(tot>0?(comp/tot*100).toFixed(0):0)+"% of waves"},
+    {l:"Complete",v:compAll,s:"across all wave groups"},
     {l:"On Track",v:ot,s:ar+" at risk · "+bh+" behind"},
     {l:"Open Issues",v:openIss,s:lateAct+" late activities"}
   ].map(c=>`<div class="scard"><div class="scard-lbl">${c.l}</div><div class="scard-val">${c.v}</div><div class="scard-sub">${c.s}</div></div>`).join("");
